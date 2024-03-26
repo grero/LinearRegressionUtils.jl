@@ -29,16 +29,3 @@ end
     @test results.pv < 1e-10
     @test results.rss ≈ 0.11241220401856507 
 end
-
-@testset "Non-parametric stats" begin
-    rng = StableRNG(1234)
-    a,b = (1.3, 0.5)
-    x = randn(rng, 20)
-    y = b .+ a*x + 0.1*randn(rng, 20)
-    results = llsq_stats(repeat(x,1,1), y;do_stats=true)
-    @show results.β
-    @show results.r²
-    @show results.rss
-    @show results.Δβ
-    @show results.σ 
-end
