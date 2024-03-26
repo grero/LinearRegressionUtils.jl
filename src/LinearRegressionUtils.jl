@@ -7,9 +7,12 @@ using Random
 
 export llsq_stats, LinRegStats
 
+VectorOfIntAndTuple = Vector{Union{Int64, Tuple{Int64,Int64}}}
+
 struct LinRegStats{T<:Real}
     X::Matrix{T}
     y::Vector{T}
+    varidx::VectorOfIntAndTuple
     β::Vector{T}
     Δβ::Vector{T}
     σ::T
@@ -19,6 +22,7 @@ struct LinRegStats{T<:Real}
 
 end
 
+
 """
 ```julia
 function llsq_stats(X,y;kvs...debug)
@@ -26,7 +30,7 @@ function llsq_stats(X,y;kvs...debug)
 Least square regression using `MultivariateStats.llsq`, also returning r² and p-value of the fit, computed via F-test
 ```
 """
-function llsq_stats(X::Matrix{T},y::Vector{T};do_interactions=false, kvs...) where T <: Real
+function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=VectorOfIntAndTuple([1:size(X,2);]);do_interactions=false, kvs...) where T <: Real
     n,d = size(X)
     if do_interactions
         # add all pairwise interactions
@@ -36,10 +40,11 @@ function llsq_stats(X::Matrix{T},y::Vector{T};do_interactions=false, kvs...) whe
         for i in 1:d-1
             for j in i+1:d
                 Xi[:,k] = X[:,i].*X[:,j]
+                push!(varidx, (i,j))
                 k += 1
             end
         end
-        return llsq_stats([X Xi], y;do_interactions=false, kvs...)
+        return llsq_stats([X Xi], y,varidx;do_interactions=false, kvs...)
     end
 	β = llsq(X, y;kvs...)
     prt = X*β[1:end-1] .+ β[end]
@@ -63,7 +68,7 @@ function llsq_stats(X::Matrix{T},y::Vector{T};do_interactions=false, kvs...) whe
     F /= rss1/(n-p1)
     pv = 1.0 - cdf(FDist(p1-1, n-p1), F)
     r² = 1.0 - rss1/rsst
-    LinRegStats(X,y,β,pc,pc_rss,r², pv,rss1)
+    LinRegStats(X,y,varidx,β,pc,pc_rss,r², pv,rss1)
 end
 
 adjusted_r²(r²::Float64, n::Int64, p::Real) = 1.0 - (1.0-r²)*(n-1)/(n-p)

@@ -28,4 +28,5 @@ end
     @test results.r² ≈ 0.9956057228435399
     @test results.pv < 1e-10
     @test results.rss ≈ 0.11241220401856507 
+    @test results.varidx == [1,2,(1,2)]
 end
