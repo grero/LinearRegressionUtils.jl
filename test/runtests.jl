@@ -22,11 +22,13 @@ end
     a,b,c,d = (1.3, 0.5, 0.2, 0.1)
     x1 = randn(rng, 20)
     x2 = randn(rng, 20)
+    # nuisance variable
+    x3 = randn(rng, 20)
     y = b .+ a*x1 .+ c*x2 .+ d*x1.*x2 .+ 0.1*randn(rng, 20)
-    results = llsq_stats([x1 x2], y;do_interactions=true)
-    @test results.β ≈  [1.27337061123587, 0.14505516134295823, 0.026233140664101238, 0.4465079643898126]
-    @test results.r² ≈ 0.9956057228435399
+    results = llsq_stats([x1 x2 x3], y;do_interactions=true,exclude_pairs=[(1,3),(2,3)])
+    @test results.β ≈ [1.3073210008945666, 0.20471491212146176, 0.011420191720528166, 0.11142141168843343, 0.5330309225644104] 
+    @test results.r² ≈ 0.9923858702288385 
     @test results.pv < 1e-10
-    @test results.rss ≈ 0.11241220401856507 
-    @test results.varidx == [1,2,(1,2)]
+    @test results.rss ≈ 0.1949992854257795 
+    @test results.varidx == [1,2,3,(1,2)]
 end
