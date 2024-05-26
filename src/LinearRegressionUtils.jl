@@ -12,6 +12,7 @@ VectorOfIntAndTuple = Vector{Union{Int64, Tuple{Int64,Int64}}}
 struct LinRegStats{T<:Real}
     X::Matrix{T}
     y::Vector{T}
+    residual::Vector{T}
     varidx::VectorOfIntAndTuple
     β::Vector{T}
     Δβ::Vector{T}
@@ -51,8 +52,9 @@ function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=Vector
     end
 	β = llsq(X, y;kvs...)
     prt = X*β[1:end-1] .+ β[end]
+    residual = y - prt
     rsst = sum(abs2, y .- mean(y))
-    rss1 = sum(abs2, y .- prt)
+    rss1 = sum(abs2, residual)
     r² = 1.0 - rss1/rsst
     pc = fill(NaN, length(β))
     pc_rss = NaN
@@ -71,7 +73,7 @@ function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=Vector
     F /= rss1/(n-p1)
     pv = 1.0 - cdf(FDist(p1-1, n-p1), F)
     r² = 1.0 - rss1/rsst
-    LinRegStats(X,y,varidx,β,pc,pc_rss,r², pv,rss1)
+    LinRegStats(X,y,residual, varidx,β,pc,pc_rss,r², pv,rss1)
 end
 
 adjusted_r²(r²::Float64, n::Int64, p::Real) = 1.0 - (1.0-r²)*(n-1)/(n-p)
