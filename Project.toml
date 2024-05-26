@@ -1,7 +1,7 @@
 name = "LinearRegressionUtils"
 uuid = "41fc471e-1f5c-4b2d-bbd1-04f3567f437e"
 authors = ["Roger Herikstad <roger.herikstad@gmail.com>"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
