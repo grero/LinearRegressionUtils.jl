@@ -15,6 +15,7 @@ using StableRNGs
     @test results.rss ≈ 0.1536016506153289
     @test results.Δβ ≈ [0.03531561821080929]
     @test results.σ ≈ 0.09237653941442567
+    @test sum(results.residual) ≈ 5.329070518200751e-15
 end
 
 @testset "Interaction" begin
