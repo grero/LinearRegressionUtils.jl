@@ -11,11 +11,11 @@ VectorOfIntAndTuple = Vector{Union{Int64, Tuple{Int64,Int64}}}
 
 struct LinRegStats{T<:Real}
     X::Matrix{T}
-    y::Vector{T}
+    y::Matrix{T}
     residual::Vector{T}
     varidx::VectorOfIntAndTuple
-    β::Vector{T}
-    Δβ::Vector{T}
+    β::Matrix{T}
+    Δβ::Vector{T} # TODO: This should probably be a matrix
     σ::T
     r²::T
     pv::T
@@ -31,7 +31,7 @@ function llsq_stats(X,y;kvs...debug)
 Least square regression using `MultivariateStats.llsq`, also returning r² and p-value of the fit, computed via F-test
 ```
 """
-function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=VectorOfIntAndTuple([1:size(X,2);]);exclude_pairs::Vector{Tuple{Int64, Int64}}=Tuple{Int64,Int64}[],do_interactions=false, kvs...) where T <: Real
+function llsq_stats(X::Matrix{T},y::Union{Vector{T}, Matrix{T}},varidx::VectorOfIntAndTuple=VectorOfIntAndTuple([1:size(X,2);]);exclude_pairs::Vector{Tuple{Int64, Int64}}=Tuple{Int64,Int64}[],do_interactions=false, kvs...) where T <: Real
     n,d = size(X)
     if do_interactions
         # add all pairwise interactions
@@ -51,17 +51,18 @@ function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=Vector
         return llsq_stats([X Xi], y,varidx;do_interactions=false, kvs...)
     end
 	β = llsq(X, y;kvs...)
-    prt = X*β[1:end-1] .+ β[end]
-    residual = y - prt
-    rsst = sum(abs2, y .- mean(y))
+    prt = X*β[1:end-1,:] .+ β[end:end,:]
+    residual = dropdims(sum(y - prt,dims=2),dims=2)
+    rsst = sum(abs2, y .- mean(y,dims=1))
     rss1 = sum(abs2, residual)
-    r² = 1.0 - rss1/rsst
+    r² = one(T) - rss1/rsst
     pc = fill(NaN, length(β))
     pc_rss = NaN
     p1 = length(β)
-    n = length(y)
-    if length(β) > size(X,2)
-        prt = X*β[1:end-1] .+ β[end]
+    n = size(y,1)
+    # check for offset
+    if size(β,1) > size(X,2)
+        prt = X*β[1:end-1,:] .+ β[end:end,:]
     else
         prt = X*β
     end
@@ -71,14 +72,15 @@ function llsq_stats(X::Matrix{T},y::Vector{T},varidx::VectorOfIntAndTuple=Vector
     pc_rss = σ
     F = (rsst - rss1)/(p1-1)
     F /= rss1/(n-p1)
-    pv = 1.0 - cdf(FDist(p1-1, n-p1), F)
-    r² = 1.0 - rss1/rsst
-    LinRegStats(X,y,residual, varidx,β,pc,pc_rss,r², pv,rss1)
+    pv = one(T) - cdf(FDist(p1-one(T), n-p1), F)
+    r² = one(T) - rss1/rsst
+    LinRegStats(X,y[:,:],residual, varidx,β[:,:],pc,pc_rss,r², pv,rss1)
 end
 
-adjusted_r²(r²::Float64, n::Int64, p::Real) = 1.0 - (1.0-r²)*(n-1)/(n-p)
+adjusted_r²(r²::T, n::Int64, p::Real) where T <: Real = one(T) - (one(T)-r²)*(n-one(T))/(n-p)
+adjusted_r²(lq::LinRegStats) = adjusted_r²(lq.r², length(lq.y), dof(lq)-1)
 
-function ftest(rss1,p1, rss2,p2,n)
+function ftest(rss1::T,p1::Real, rss2::T,p2::Real,n::Integer) where T <: Real
     if rss1 > rss2
         fv = (rss1-rss2)/(p2-p1)
         fv /= rss2/(n-p2)
@@ -90,7 +92,21 @@ function ftest(rss1,p1, rss2,p2,n)
         dp = p1-p2
         p = p1
     end
-    fv, 1-cdf(FDist(dp,n-p), fv)
+    fv, one(T)-cdf(FDist(dp,n-p), fv)
+end
+
+StatsBase.dof(lq::LinRegStats) = length(lq.β)
+
+function fstat(lq1::LinRegStats,lq2::LinRegStats)
+    rsst = sum(abs2, lq1.y .- mean(lq1.y))
+    n = length(lq1.y)
+    @assert n == length(lq2.y)
+
+    rss1 = lq1.rss
+    rss2= lq2.rss
+    p1 = dof(lq1)
+    p2 = dof(lq2)
+    ftest(rss1, p1, rss2,p2,n)
 end
 
 end
