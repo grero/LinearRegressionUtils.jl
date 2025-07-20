@@ -72,14 +72,15 @@ function llsq_stats(X::Matrix{T},y::Union{Vector{T}, Matrix{T}},varidx::VectorOf
     pc_rss = σ
     F = (rsst - rss1)/(p1-1)
     F /= rss1/(n-p1)
-    pv = 1.0 - cdf(FDist(p1-1, n-p1), F)
-    r² = 1.0 - rss1/rsst
-    LinRegStats(X,y,residual, varidx,β,pc,pc_rss,r², pv,rss1)
+    pv = one(T) - cdf(FDist(p1-one(T), n-p1), F)
+    r² = one(T) - rss1/rsst
+    LinRegStats(X,y[:,:],residual, varidx,β[:,:],pc,pc_rss,r², pv,rss1)
 end
 
-adjusted_r²(r²::Float64, n::Int64, p::Real) = 1.0 - (1.0-r²)*(n-1)/(n-p)
+adjusted_r²(r²::T, n::Int64, p::Real) where T <: Real = one(T) - (one(T)-r²)*(n-one(T))/(n-p)
+adjusted_r²(lq::LinRegStats) = adjusted_r²(lq.r², length(lq.y), dof(lq)-1)
 
-function ftest(rss1,p1, rss2,p2,n)
+function ftest(rss1::T,p1::Real, rss2::T,p2::Real,n::Integer) where T <: Real
     if rss1 > rss2
         fv = (rss1-rss2)/(p2-p1)
         fv /= rss2/(n-p2)
@@ -91,7 +92,21 @@ function ftest(rss1,p1, rss2,p2,n)
         dp = p1-p2
         p = p1
     end
-    fv, 1-cdf(FDist(dp,n-p), fv)
+    fv, one(T)-cdf(FDist(dp,n-p), fv)
+end
+
+StatsBase.dof(lq::LinRegStats) = length(lq.β)
+
+function fstat(lq1::LinRegStats,lq2::LinRegStats)
+    rsst = sum(abs2, lq1.y .- mean(lq1.y))
+    n = length(lq1.y)
+    @assert n == length(lq2.y)
+
+    rss1 = lq1.rss
+    rss2= lq2.rss
+    p1 = dof(lq1)
+    p2 = dof(lq2)
+    ftest(rss1, p1, rss2,p2,n)
 end
 
 end
