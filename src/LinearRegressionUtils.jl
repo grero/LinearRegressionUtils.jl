@@ -31,7 +31,7 @@ function llsq_stats(X,y;kvs...debug)
 Least square regression using `MultivariateStats.llsq`, also returning r² and p-value of the fit, computed via F-test
 ```
 """
-function llsq_stats(X::Matrix{T},y::Union{Vector{T}, Matrix{T}},varidx::VectorOfIntAndTuple=VectorOfIntAndTuple([1:size(X,2);]);exclude_pairs::Vector{Tuple{Int64, Int64}}=Tuple{Int64,Int64}[],do_interactions=false, kvs...) where T <: Real
+function llsq_stats(X::Matrix{T},y::AbstractMatrix{T},varidx::VectorOfIntAndTuple=VectorOfIntAndTuple([1:size(X,2);]);exclude_pairs::Vector{Tuple{Int64, Int64}}=Tuple{Int64,Int64}[],do_interactions=false, kvs...) where T <: Real
     n,d = size(X)
     if do_interactions
         # add all pairwise interactions
